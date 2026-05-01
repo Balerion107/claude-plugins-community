@@ -10,7 +10,7 @@ log()   { printf '%s\n' "$*"; }
 info()  { printf '::notice::%s\n' "$*"; }
 warn()  { printf '::warning::%s\n' "$*"; }
 error() { printf '::error::%s\n' "$*"; }
-die()   { error "$*"; exit 1; }
+die()   { error "$*"; record_result "fatal" "fail" "die" "$*"; exit 1; }
 
 group_start() { printf '::group::%s\n' "$*"; }
 group_end()   { printf '::endgroup::\n'; }
@@ -32,17 +32,22 @@ record_result() {
     >> "$RESULTS_FILE"
 }
 
-# ---- safety assertions -----------------------------------------------------
+# ---- safety predicates / assertions ---------------------------------------
 
-# Reject any string containing shell metacharacters or whitespace.
-# Defense-in-depth on top of schema regex enforcement.
+# Returns 0 if the value contains shell metacharacters or whitespace.
+has_unsafe_chars() {
+  case "$1" in
+    *'$'*|*'`'*|*';'*|*'&'*|*'|'*|*'('*|*')'*|*'<'*|*'>'*|*' '*|*'	'*|*'"'*|*"'"*|*'\'*)
+      return 0 ;;
+  esac
+  return 1
+}
+
 assert_safe_string() {
   local label="$1" value="$2"
-  case "$value" in
-    *'$'*|*'`'*|*';'*|*'&'*|*'|'*|*'('*|*')'*|*'<'*|*'>'*|*' '*|*'	'*|*'"'*|*"'"*|*'\'*)
-      die "$label contains unsafe characters: $value"
-      ;;
-  esac
+  if has_unsafe_chars "$value"; then
+    die "$label contains unsafe characters: $value"
+  fi
 }
 
 # URL must be https://<allowed-host>/<safe-chars> only.
@@ -59,7 +64,8 @@ assert_safe_url() {
   if [[ "$host" =~ ^[0-9.]+$ ]] || [[ "$host" =~ : ]]; then
     die "url host is a bare IP address (not permitted): $host"
   fi
-  local allowed="${ALLOWED_HOSTS:-github.com gitlab.com bitbucket.org}"
+  : "${ALLOWED_HOSTS:?ALLOWED_HOSTS must be set (action.yml provides the default)}"
+  local allowed="$ALLOWED_HOSTS"
   local ok=""
   for h in $allowed; do
     if [[ "$host" == "$h" ]] || [[ "$host" == *".$h" ]]; then
@@ -88,16 +94,30 @@ assert_safe_path() {
   fi
 }
 
-# ---- jq helpers ------------------------------------------------------------
-
-# Read .plugins[] from a marketplace file as compact JSON lines.
-mp_entries() {
-  local file="$1"
-  jq -c '.plugins[]' -- "$file"
+# ---- CLI validation helper -------------------------------------------------
+# Runs `claude plugin validate <path>`, classifies pass/warn/fail, honours
+# FAIL_ON_WARNINGS, records the result. Returns 0 on pass/warn, 1 on fail.
+cli_validate() {
+  local step="$1" subject="$2" path="$3"
+  local out
+  if out="$(claude plugin validate "$path" 2>&1)"; then
+    log "$out"
+    if grep -qE '^⚠|passed with warnings' <<<"$out"; then
+      if [[ "${FAIL_ON_WARNINGS:-false}" == "true" ]]; then
+        error "$subject: warnings (fail-on-warnings is set)"
+        record_result "$step" "fail" "$subject" "$out"
+        return 1
+      fi
+      warn "$subject: warnings"
+      record_result "$step" "warn" "$subject" "$out"
+    else
+      record_result "$step" "pass" "$subject" ""
+    fi
+    return 0
+  fi
+  error "$subject: claude plugin validate failed"
+  log "$out"
+  record_result "$step" "fail" "$subject" "$out"
+  return 1
 }
 
-# Extract a field from a single-entry JSON string.
-entry_field() {
-  local entry="$1" field="$2"
-  jq -r --arg f "$field" '.[$f] // empty' <<<"$entry"
-}

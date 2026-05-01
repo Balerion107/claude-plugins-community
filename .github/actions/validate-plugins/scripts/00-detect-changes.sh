@@ -32,8 +32,10 @@ fi
 
 if (( ALL_CHANGED )); then
   DIFF_FILES=""
-else
-  DIFF_FILES="$(git diff --name-only "$BASE_REF"...HEAD 2>/dev/null || true)"
+elif ! DIFF_FILES="$(git diff --name-only "$BASE_REF"...HEAD 2>&1)"; then
+  warn "git diff failed ($DIFF_FILES); treating ALL entries and folders as changed"
+  ALL_CHANGED=1
+  DIFF_FILES=""
 fi
 log "Changed files:"
 log "$DIFF_FILES"
@@ -108,19 +110,10 @@ log "Changed external entries: $(jq 'length' <<<"$changed_external_json")"
 # containing .claude-plugin/plugin.json. Handles nested plugins
 # (e.g. partner-built/slack/).
 
-changed_folders_json='[]'
-declare -A seen_folders=()
-
-add_folder() {
-  local d="$1"
-  [[ -n "${seen_folders[$d]:-}" ]] && return
-  seen_folders["$d"]=1
-  changed_folders_json="$(jq -c --arg d "$d" '. + [$d]' <<<"$changed_folders_json")"
-}
-
+folders=()
 if (( ALL_CHANGED )); then
   while IFS= read -r pj; do
-    add_folder "$(dirname "$(dirname "$pj")")"
+    folders+=("$(dirname "$(dirname "$pj")")")
   done < <(find . -mindepth 2 -path '*/.claude-plugin/plugin.json' -not -path './.git/*' | sed 's|^\./||')
 else
   while IFS= read -r f; do
@@ -128,13 +121,13 @@ else
     d="$(dirname "$f")"
     while [[ "$d" != "." && "$d" != "/" ]]; do
       if [[ -f "$d/.claude-plugin/plugin.json" ]]; then
-        add_folder "$d"
-        break
+        folders+=("$d"); break
       fi
       d="$(dirname "$d")"
     done
   done <<<"$DIFF_FILES"
 fi
+changed_folders_json="$(printf '%s\n' "${folders[@]+"${folders[@]}"}" | sort -u | jq -R -s -c 'split("\n") | map(select(length>0))')"
 
 log "Changed in-repo plugin folders: $changed_folders_json"
 

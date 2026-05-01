@@ -4,7 +4,7 @@
 #
 # I1  plugins[] alpha-sorted by name
 # I2  no duplicate names
-# I3  description 10-500 chars, no leading/trailing whitespace
+# I3  description 10-2000 chars, no leading/trailing whitespace
 # I4  all source.url are https:// (re-checked here as defense-in-depth)
 # I5  every external source has a 40-char sha
 # I6  per-file mode: filename matches .name
@@ -42,9 +42,9 @@ flag() {
 
 group_start "Custom invariants I1-I9"
 
-# I1 sort
-sorted="$(jq -r '[.plugins[].name] | . == (.|sort)' -- "$MP")"
-[[ "$sorted" == "true" ]] || flag "I1" "plugins[] is not alpha-sorted by name"
+# I1 sort (case-insensitive, matching upstream assembler convention)
+sorted="$(jq -r '[.plugins[].name | ascii_downcase] | . == (.|sort)' -- "$MP")"
+[[ "$sorted" == "true" ]] || flag "I1" "plugins[] is not alpha-sorted by name (case-insensitive)"
 
 # I2 dups
 dups="$(jq -r '[.plugins[].name] | group_by(.) | map(select(length>1) | .[0]) | .[]' -- "$MP")"
@@ -84,11 +84,9 @@ while IFS= read -r entry; do
   # I9: every string-valued field under .source must be free of shell metacharacters.
   while IFS= read -r v; do
     [[ -z "$v" ]] && continue
-    case "$v" in
-      *'$'*|*'`'*|*';'*|*'&'*|*'|'*|*'('*|*')'*|*'<'*|*'>'*|*' '*|*"'"*|*'"'*|*'\'*)
-        flag "I9" "$name: source field contains shell metacharacters: $v" "$name"
-        ;;
-    esac
+    if has_unsafe_chars "$v"; then
+      flag "I9" "$name: source field contains shell metacharacters: $v" "$name"
+    fi
   done < <(jq -r '.source | to_entries[] | select(.value|type=="string") | .value' <<<"$entry")
 done < <(jq -c '.plugins[] | select(.source | type == "object")' -- "$MP")
 
@@ -100,7 +98,7 @@ if [[ -n "${ENTRIES_DIR:-}" ]]; then
     inner="$(jq -r '.name' -- "$f")"
     [[ "$base" == "$inner" ]] || flag "I6" "$f: filename '$base' != .name '$inner'" "$inner"
   done
-  if git diff --name-only "$BASE_REF"...HEAD 2>/dev/null | grep -qx "$MARKETPLACE_PATH"; then
+  if git diff --name-only "$BASE_REF"...HEAD 2>/dev/null | grep -qxF -- "$MARKETPLACE_PATH"; then
     flag "I7" "PR edits $MARKETPLACE_PATH directly; per-file repos must edit $ENTRIES_DIR/*.json only"
   fi
 fi
@@ -109,12 +107,10 @@ fi
 while IFS= read -r entry; do
   name="$(jq -r '.name' <<<"$entry")"
   p="$(jq -r '.source' <<<"$entry")"
-  case "$p" in
-    *'$'*|*'`'*|*';'*|*'&'*|*'|'*|*'('*|*')'*|*'<'*|*'>'*|*' '*|*"'"*|*'"'*|*'\'*|*'..'*)
-      flag "I9" "$name: vendored source path contains unsafe characters: $p" "$name"
-      continue
-      ;;
-  esac
+  if has_unsafe_chars "$p" || [[ "$p" == *".."* ]]; then
+    flag "I9" "$name: vendored source path contains unsafe characters: $p" "$name"
+    continue
+  fi
   p_clean="${p#./}"
   if [[ ! -f "$p_clean/.claude-plugin/plugin.json" ]]; then
     flag "I8" "$name: vendored source '$p' has no .claude-plugin/plugin.json" "$name"

@@ -168,6 +168,7 @@ export ACTION_PATH=.github/actions/validate-plugins
 export VALIDATE_TMP=/tmp/validate-plugins
 export BASE_REF=origin/main
 export MARKETPLACE_PATH=.claude-plugin/marketplace.json
+export ALLOWED_HOSTS="github.com gitlab.com bitbucket.org"
 mkdir -p "$VALIDATE_TMP"
 
 bash $ACTION_PATH/scripts/00-detect-changes.sh

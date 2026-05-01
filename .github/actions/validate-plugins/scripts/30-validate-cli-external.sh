@@ -33,10 +33,12 @@ if [[ "$count" -eq 0 ]]; then
 fi
 
 failures=0
+idx=0
 workroot="$(mktemp -d)"
 trap 'rm -rf "$workroot"' EXIT
 
 while IFS= read -r ext; do
+  idx=$((idx+1))
   name="$(jq -r '.name' <<<"$ext")"
   kind="$(jq -r '.source.source // "unknown"' <<<"$ext")"
   url="$(jq -r '.source.url // .source.repo // empty' <<<"$ext")"
@@ -68,7 +70,7 @@ while IFS= read -r ext; do
   assert_safe_sha "$sha"
   [[ -z "$subdir" ]] || assert_safe_path "$subdir"
 
-  dest="$workroot/$name"
+  dest="$workroot/ext-$idx"
   mkdir -p -- "$dest"
 
   if ! timeout "$TIMEOUT_SECS" git clone --quiet --depth 1 -- "$url" "$dest" 2>&1; then

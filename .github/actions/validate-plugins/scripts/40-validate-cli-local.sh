@@ -31,26 +31,7 @@ while IFS= read -r folder; do
     continue
   fi
 
-  if out="$(claude plugin validate "$manifest" 2>&1)"; then
-    if grep -qi "warning" <<<"$out"; then
-      if [[ "${FAIL_ON_WARNINGS:-false}" == "true" ]]; then
-        error "$folder: warnings (fail-on-warnings is set)"
-        log "$out"
-        record_result "cli-local" "fail" "$folder" "$out"
-        failures=$((failures+1))
-        continue
-      fi
-      warn "$folder: warnings"
-      log "$out"
-      record_result "cli-local" "warn" "$folder" "$out"
-    else
-      log "  ✓ $folder OK"
-      record_result "cli-local" "pass" "$folder" ""
-    fi
-  else
-    error "$folder: claude plugin validate failed"
-    log "$out"
-    record_result "cli-local" "fail" "$folder" "$out"
+  if ! cli_validate "cli-local" "$folder" "$manifest"; then
     failures=$((failures+1))
   fi
 done < <(jq -r '.folders[]' -- "$CHANGES")
