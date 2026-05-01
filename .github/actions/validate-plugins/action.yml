@@ -1,0 +1,167 @@
+name: Validate Plugins
+description: >
+  Canonical validation for Claude plugin marketplace repos. Runs
+  `claude plugin validate` (the source-of-truth schema check) plus a layer of
+  security/policy invariants, against the marketplace file, changed external
+  plugins, and changed in-repo plugin folders.
+
+inputs:
+  marketplace-path:
+    description: Path to the assembled marketplace.json
+    default: .claude-plugin/marketplace.json
+  entries-dir:
+    description: >
+      If set (e.g. ".claude-plugin/plugins"), the repo stores one entry per file
+      under this directory. The action assembles them into a marketplace.json
+      before validating, and applies per-file invariants I6/I7.
+    default: ""
+  base-ref:
+    description: Git ref to diff against for change detection
+    default: ${{ github.event.pull_request.base.sha || github.event.before || 'origin/main' }}
+  warn-invariants:
+    description: >
+      Space-separated invariant codes treated as WARN instead of ERROR. Tune
+      per-repo policy without forking the action.
+    default: "I1 I3 I5 I8"
+  skip-external:
+    description: Skip cloning/validating external plugins (step 30)
+    default: "false"
+  skip-local-folders:
+    description: Skip validating in-repo plugin folders (steps 40/41)
+    default: "false"
+  fail-on-warnings:
+    description: >
+      Treat warnings as failures across steps 11/20/40 (invariant warnings and
+      `claude plugin validate` warnings). Use to enforce a strict policy.
+    default: "false"
+  validate-all-external:
+    description: >
+      Run step 30 against EVERY external entry, not just changed ones. Intended
+      for nightly drift-detection workflows (catches deleted repos, force-pushed
+      SHAs). Expensive on large marketplaces.
+    default: "false"
+  claude-cli-version:
+    description: >
+      Version of @anthropic-ai/claude-code to install. This is the
+      source-of-truth schema check, so "latest" tracks upstream automatically.
+      Pin a version for reproducible CI; bump via renovate/dependabot.
+    default: latest
+  external-timeout-secs:
+    description: Per-plugin timeout for clone + validate in step 30
+    default: "120"
+  allowed-hosts:
+    description: >
+      Space-separated allowlist of git hosts that external source.url may point
+      to. Subdomains are accepted. Bare IP addresses are always rejected.
+    default: "github.com gitlab.com bitbucket.org"
+  npm-registry:
+    description: >
+      Optional npm registry URL. If set, runs `npm config set registry <url>`
+      before installing tooling. Leave empty to use the runner default.
+    default: ""
+
+outputs:
+  changed-entries:
+    description: JSON array of marketplace entry names changed in this PR
+    value: ${{ steps.detect.outputs.changed-entries }}
+  changed-external:
+    description: JSON array of changed external entries ({name, source})
+    value: ${{ steps.detect.outputs.changed-external }}
+  changed-folders:
+    description: JSON array of changed in-repo plugin folder paths
+    value: ${{ steps.detect.outputs.changed-folders }}
+  result:
+    description: "pass or fail"
+    value: ${{ steps.report.outputs.result }}
+  report-path:
+    description: Path to the markdown report
+    value: ${{ steps.report.outputs.report-path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Setup
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "VALIDATE_TMP=${{ runner.temp }}/validate-plugins" >> "$GITHUB_ENV"
+        echo "ACTION_PATH=${{ github.action_path }}" >> "$GITHUB_ENV"
+        mkdir -p "${{ runner.temp }}/validate-plugins"
+        chmod +x "${{ github.action_path }}/scripts/"*.sh "${{ github.action_path }}/lib/"*.sh
+
+    - name: Install jq
+      shell: bash
+      run: command -v jq >/dev/null || sudo apt-get install -y jq
+
+    - name: Install Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Configure npm registry
+      if: inputs.npm-registry != ''
+      shell: bash
+      env:
+        NPM_REGISTRY: ${{ inputs.npm-registry }}
+      run: npm config set registry "$NPM_REGISTRY"
+
+    - name: Install claude CLI
+      shell: bash
+      env:
+        CLAUDE_CLI_VERSION: ${{ inputs.claude-cli-version }}
+      run: |
+        set -euo pipefail
+        npm install -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
+        claude --version
+
+    - name: Detect changes
+      id: detect
+      shell: bash
+      env:
+        BASE_REF: ${{ inputs.base-ref }}
+        MARKETPLACE_PATH: ${{ inputs.marketplace-path }}
+        ENTRIES_DIR: ${{ inputs.entries-dir }}
+      run: "$ACTION_PATH/scripts/00-detect-changes.sh"
+
+    - name: Custom invariants I1-I9
+      shell: bash
+      env:
+        MARKETPLACE_PATH: ${{ inputs.marketplace-path }}
+        ENTRIES_DIR: ${{ inputs.entries-dir }}
+        BASE_REF: ${{ inputs.base-ref }}
+        FAIL_ON_WARNINGS: ${{ inputs.fail-on-warnings }}
+        WARN_INVARIANTS: ${{ inputs.warn-invariants }}
+      run: "$ACTION_PATH/scripts/11-validate-invariants.sh"
+
+    - name: CLI validate marketplace
+      shell: bash
+      env:
+        FAIL_ON_WARNINGS: ${{ inputs.fail-on-warnings }}
+      run: "$ACTION_PATH/scripts/20-validate-cli-marketplace.sh"
+
+    - name: CLI validate external plugins
+      if: inputs.skip-external != 'true'
+      shell: bash
+      env:
+        EXTERNAL_TIMEOUT_SECS: ${{ inputs.external-timeout-secs }}
+        ALLOWED_HOSTS: ${{ inputs.allowed-hosts }}
+        VALIDATE_ALL_EXTERNAL: ${{ inputs.validate-all-external }}
+      run: "$ACTION_PATH/scripts/30-validate-cli-external.sh"
+
+    - name: CLI validate changed in-repo folders
+      if: inputs.skip-local-folders != 'true'
+      shell: bash
+      env:
+        FAIL_ON_WARNINGS: ${{ inputs.fail-on-warnings }}
+      run: "$ACTION_PATH/scripts/40-validate-cli-local.sh"
+
+    - name: Aux-file JSON parse (changed in-repo folders)
+      if: inputs.skip-local-folders != 'true'
+      shell: bash
+      run: "$ACTION_PATH/scripts/41-validate-aux-files.sh"
+
+    - name: Report
+      id: report
+      if: always()
+      shell: bash
+      run: "$ACTION_PATH/scripts/90-report.sh"
