@@ -1,0 +1,29 @@
+name: Validate Plugins
+
+on:
+  pull_request:
+    paths:
+      - '.claude-plugin/**'
+      - '.github/actions/validate-plugins/**'
+  push:
+    branches: [main]
+    paths:
+      - '.claude-plugin/**'
+      - '.github/actions/validate-plugins/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Dogfood: this repo uses its own local copy of the action.
+      # External consumers MUST pin a SHA — see the action README.
+      - uses: ./.github/actions/validate-plugins
+        with:
+          marketplace-path: .claude-plugin/marketplace.json
+          skip-local-folders: "true"
