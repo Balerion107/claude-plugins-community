@@ -18284,6 +18284,18 @@
       "homepage": "https://github.com/keitashimoda24-maker/slash-commands-jp"
     },
     {
+      "name": "slice-global",
+      "description": "Official Slice plugin for Claude. Ask Claude about your cap table, grants, share classes, ESOP pools, compliance posture, valuations, workflows, and exit waterfalls  - all through the read-only Slice MCP server, scoped to your Slice login via OAuth, with tokens stored only on your machine.",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/Global-Slice/claude-plugin.git",
+        "path": "plugins/slice-global",
+        "ref": "main",
+        "sha": "59d46dcd80e2475a319547360b78ecccd009ce76"
+      },
+      "homepage": "https://github.com/Global-Slice/claude-plugin"
+    },
+    {
       "name": "slide-revive",
       "description": "Rebuild NotebookLM slide PDFs as fully editable PPTX files using Vision AI.\n\nNotebookLM exports each slide as a flat image, making text and shapes impossible to edit. slide-revive extracts each page, analyzes it with Claude Vision, reconstructs the slide structure with native text boxes, tables, and shapes, and generates a polished .pptx alongside an instant .html preview — all in one command. No external API key required. Supports macOS and Windows.",
       "source": {
