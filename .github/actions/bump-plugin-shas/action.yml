@@ -26,8 +26,18 @@ inputs:
   npm-registry:
     description: Optional npm registry URL for tooling installs
     default: ""
+  pr-mode:
+    description: >
+      "batch" — single PR (pr-branch, force-reset nightly) containing all
+      passing bumps; failures revert via the downstream revert workflow.
+      "per-entry" — one PR per bumped plugin on branch bump/<name>; failures
+      stay open in their own PR for triage. Required for downstream per-PR
+      verdict emission and `/triage-bump-prs --repo official`.
+    default: batch
   pr-branch:
-    description: Branch name for the bump PR
+    description: >
+      Branch name for the bump PR (batch mode only). In per-entry mode, the
+      branch is derived per-entry as bump/<sanitized-name>.
     default: bump/plugin-shas
   base-branch:
     description: Branch to open the PR against
@@ -41,11 +51,18 @@ outputs:
     description: JSON array of {name, old_sha, new_sha} that were bumped
     value: ${{ steps.bump.outputs.bumped }}
   skipped:
-    description: JSON array of {name, reason} that were skipped (validation failed / unreachable)
+    description: JSON array of {name, reason} that were skipped (validation failed / unreachable / open PR)
     value: ${{ steps.bump.outputs.skipped }}
   pr-url:
-    description: URL of the bump PR (empty if nothing to bump)
+    description: URL of the bump PR in batch mode (empty in per-entry mode or when nothing to bump)
     value: ${{ steps.bump.outputs.pr-url }}
+  pr-urls:
+    description: >
+      JSON array of {name, old_sha, new_sha, branch, pr_url} for each bump
+      that produced a PR. Empty in batch mode (use pr-url instead) or when
+      nothing to bump. Consumed by per-entry callers to fan out scan
+      dispatches and downstream triage.
+    value: ${{ steps.bump.outputs.pr-urls }}
 
 runs:
   using: composite
@@ -90,6 +107,7 @@ runs:
         MARKETPLACE_PATH: ${{ inputs.marketplace-path }}
         MAX_BUMPS: ${{ inputs.max-bumps }}
         ALLOWED_HOSTS: ${{ inputs.allowed-hosts }}
+        PR_MODE: ${{ inputs.pr-mode }}
         PR_BRANCH: ${{ inputs.pr-branch }}
         BASE_BRANCH: ${{ inputs.base-branch }}
         GH_TOKEN: ${{ inputs.github-token }}
