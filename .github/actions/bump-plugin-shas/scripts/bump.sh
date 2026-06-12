@@ -30,6 +30,12 @@ source "$VALIDATE_LIB"
 # and the nightly run would re-pin it — silently undoing the exemption.
 SHA_EXEMPT=" ${SHA_EXEMPT:-} "
 
+# Space-padded, same matching. FREEZE_SHAS names are PINNED entries held at
+# their current source.sha — skipped from the bump so the pin can't advance
+# until the name is removed (e.g. a security freeze pending a fix-forward).
+# Distinct from SHA_EXEMPT: a frozen entry keeps its sha; an exempt one has none.
+FREEZE_SHAS=" ${FREEZE_SHAS:-} "
+
 PR_MODE="${PR_MODE:-batch}"
 case "$PR_MODE" in
   batch|per-entry) ;;
@@ -71,6 +77,26 @@ branch_for() {
   echo "bump/$sanitized"
 }
 
+# Reconcile freeze-shas against the marketplace before discovery. A listed name
+# that can't actually hold a pin — a typo, a name with no pinned-source entry,
+# or one the freeze guard's charset rejects (uppercase, dots, scope/slash) —
+# silently no-ops while the nightly advances the pin anyway. For a security
+# freeze that's the worst failure mode, so surface it loudly. Warning, not
+# fatal: a stale freeze name must not block legitimate bumps of other entries.
+# read -ra (not unquoted $FREEZE_SHAS) so a glob char in the list can't expand.
+if [[ -n "${FREEZE_SHAS// /}" ]]; then
+  freeze_external_names=" $(jq -r '.plugins[] | select(.source | type=="object") | .name' -- "$MARKETPLACE_PATH" | tr '\n' ' ')"
+  read -ra _freeze_listed <<<"$FREEZE_SHAS"
+  for fname in "${_freeze_listed[@]}"; do
+    [[ -n "$fname" ]] || continue
+    if [[ ! "$fname" =~ ^[a-z0-9][a-z0-9-]{1,63}$ ]]; then
+      warn "freeze-shas: '$fname' is not a valid plugin name ([a-z0-9-], 2-64 chars) — it matches no entry and the freeze guard skips it; that pin is NOT protected."
+    elif [[ "$freeze_external_names" != *" $fname "* ]]; then
+      warn "freeze-shas: '$fname' matches no external (pinned-source) marketplace entry — typo, or the entry isn't pinned? That pin is NOT protected."
+    fi
+  done
+fi
+
 group_start "Discover stale SHAs and validate at new HEAD"
 
 while IFS= read -r entry; do
@@ -84,6 +110,15 @@ while IFS= read -r entry; do
   if [[ "$name" =~ ^[a-z0-9][a-z0-9-]{1,63}$ && "$SHA_EXEMPT" == *" $name "* ]]; then
     log "$name: unpinned by policy (sha-exempt); not bumping"
     skipped="$(jq -c --arg n "$name" --arg r "unpinned by policy (sha-exempt)" '. + [{name:$n, reason:$r}]' <<<"$skipped")"
+    continue
+  fi
+
+  # Frozen pins: keep the current source.sha, skip the bump. A deliberate hold
+  # (e.g. security freeze pending an upstream fix-forward), not a per-run
+  # anomaly — plain log, recorded in `skipped` so the freeze is visible.
+  if [[ "$name" =~ ^[a-z0-9][a-z0-9-]{1,63}$ && "$FREEZE_SHAS" == *" $name "* ]]; then
+    log "$name: frozen at current pin (freeze-shas); not bumping"
+    skipped="$(jq -c --arg n "$name" --arg r "frozen at current pin (freeze-shas)" '. + [{name:$n, reason:$r}]' <<<"$skipped")"
     continue
   fi
 

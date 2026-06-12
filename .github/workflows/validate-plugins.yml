@@ -24,6 +24,9 @@ jobs:
       - name: Static invariant tests
         run: bash .github/actions/validate-plugins/test-invariants.sh
 
+      - name: bump-plugin-shas skip/freeze tests
+        run: bash .github/actions/bump-plugin-shas/test-bump.sh
+
       - name: External manifest resolution tests
         run: bash .github/actions/validate-plugins/test-external-manifest.sh
 
