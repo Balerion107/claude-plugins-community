@@ -47,6 +47,7 @@ run_bump() {
     MAX_BUMPS=20 ALLOWED_HOSTS="github.com gitlab.com bitbucket.org" \
     PR_BRANCH="bump/plugin-shas" BASE_BRANCH="main" GH_TOKEN="dummy" \
     SHA_EXEMPT="${SHA_EXEMPT_FIXTURE:-}" FREEZE_SHAS="${FREEZE_SHAS_FIXTURE:-}" \
+    ONLY="${ONLY_FIXTURE:-}" \
     GITHUB_OUTPUT="$TMP/out.txt" GITHUB_STEP_SUMMARY="$TMP/sum.md"
   : > "$TMP/out.txt"; : > "$TMP/sum.md"
   set +e
@@ -92,6 +93,23 @@ assert_rc() {
   total=$((total+1))
   if [[ "$RC" == "$1" ]]; then echo "  PASS $2"
   else echo "  FAIL $2 — exit $RC, expected $1"; failures=$((failures+1)); fi
+}
+
+# assert_not_skipped NAME LABEL — entry NAME does NOT appear in skipped[] (it was
+# plain-continued by the `only` guard, not recorded as a skip).
+assert_not_skipped() {
+  total=$((total+1))
+  local got; got="$(jq -r --arg n "$1" '[.[]|select(.name==$n)]|length' <<<"$SKIPPED_JSON")"
+  if [[ "$got" == "0" ]]; then echo "  PASS $2"
+  else echo "  FAIL $2 — '$1' unexpectedly recorded in skipped[]"; failures=$((failures+1)); fi
+}
+
+# assert_skipped_count N LABEL — exactly N entries in skipped[].
+assert_skipped_count() {
+  total=$((total+1))
+  local got; got="$(jq -r 'length' <<<"$SKIPPED_JSON")"
+  if [[ "$got" == "$1" ]]; then echo "  PASS $2"
+  else echo "  FAIL $2 — skipped[] has $got, expected $1"; failures=$((failures+1)); fi
 }
 
 echo "=== bump-plugin-shas freeze/exempt tests ==="
@@ -177,6 +195,90 @@ EOF
 FREEZE_SHAS_FIXTURE=""; SHA_EXEMPT_FIXTURE=""
 run_bump "$f"
 assert_no_warn "freeze-shas:" "empty freeze list → no freeze-shas warning"
+
+echo
+echo "=== bump-plugin-shas single-plugin (only) target tests ==="
+
+# Shared 2-entry fixture for the `only` cases. Both entries short-circuit BEFORE
+# `git ls-remote` (alpha via the freeze gate; beta via a non-allowlisted host), so
+# these stay network/gh/claude-free like the rest of this suite. alpha is on
+# github.com so that — absent the freeze — it WOULD reach ls-remote; the freeze
+# proves the target falls through to its real skip reason rather than the only
+# guard swallowing it.
+only_fix=$(mk onlytgt <<'EOF'
+{"plugins":[{"name":"alpha","source":{"url":"https://github.com/acme/alpha","sha":"1111111111111111111111111111111111111111"}},{"name":"beta","source":{"url":"https://example.com/acme/beta","sha":"2222222222222222222222222222222222222222"}}]}
+EOF
+)
+
+# 9. only=alpha (a frozen target): alpha still reports its freeze reason; beta is
+#    plain-continued (NOT recorded in skipped[]). Proves the target falls through
+#    to its real skip reason AND a non-target is silently plain-continued. (NOTE:
+#    this case does NOT pin the guard's POSITION relative to the freeze gate — a
+#    frozen target reports "frozen" with the guard either before or after freeze.
+#    The guard-before-everything ordering invariant is pinned by case 11, which
+#    relies on a non-matching target producing ZERO skip records.)
+ONLY_FIXTURE="alpha"; FREEZE_SHAS_FIXTURE="alpha"; SHA_EXEMPT_FIXTURE=""
+run_bump "$only_fix"
+assert_reason      "alpha" "frozen at current pin (freeze-shas)" "only=target still reports its real skip reason"
+assert_not_skipped "beta"                                        "only=target → non-target plain-continued (not in skipped[])"
+assert_skipped_count 1                                           "only=target → exactly one entry recorded"
+assert_pin_held    "$only_fix"                                   "only=target → marketplace unchanged"
+
+# 10. only="" (default): every entry processed exactly as today — alpha frozen,
+#     beta host-skipped → both recorded. Proves the empty-ONLY no-op.
+ONLY_FIXTURE=""; FREEZE_SHAS_FIXTURE="alpha"; SHA_EXEMPT_FIXTURE=""
+run_bump "$only_fix"
+assert_reason        "alpha" "frozen at current pin (freeze-shas)" "only='' → alpha still frozen"
+assert_reason        "beta"  "not in allowlist"                    "only='' → beta still host-skipped"
+assert_skipped_count 2                                             "only='' → both entries processed (byte-identical default)"
+
+# 11. only=<missing>: no entry matches → all plain-continued → Nothing to bump.
+ONLY_FIXTURE="ghost"; FREEZE_SHAS_FIXTURE="alpha"; SHA_EXEMPT_FIXTURE=""
+run_bump "$only_fix"
+assert_skipped_count 0   "only=missing → no entry recorded (all plain-continued)"
+assert_rc 0              "only=missing → exits 0 (Nothing to bump)"
+assert_pin_held "$only_fix" "only=missing → marketplace unchanged"
+
+# 12. only='bad name' (whitespace): rejected up front via has_unsafe_chars → die.
+#     run_bump captures RC via its own `set +e` wrapper — no errexit-suppressing
+#     `( … ) || rc=$?` around the command under test.
+ONLY_FIXTURE="bad name"; FREEZE_SHAS_FIXTURE=""; SHA_EXEMPT_FIXTURE=""
+run_bump "$only_fix"
+assert_rc 1 "only='bad name' (whitespace) → die (RC 1)"
+assert_warn "contains unsafe characters" "only='bad name' → unsafe-char die message"
+
+# 13. has_unsafe_chars ALLOWS a scoped/dotted name (the whole reason `only` uses it
+#     instead of the narrow freeze charset). A scoped target must NOT die — it
+#     passes validation and reaches normal processing (here: host-skip, network-free,
+#     since the freeze gate's [a-z0-9-] regex doesn't match a scoped name anyway).
+scoped_fix=$(mk scoped <<'EOF'
+{"plugins":[{"name":"@acme/scoped","source":{"url":"https://example.com/acme/scoped","sha":"4444444444444444444444444444444444444444"}},{"name":"alpha","source":{"url":"https://github.com/acme/alpha","sha":"1111111111111111111111111111111111111111"}}]}
+EOF
+)
+ONLY_FIXTURE="@acme/scoped"; FREEZE_SHAS_FIXTURE=""; SHA_EXEMPT_FIXTURE=""
+run_bump "$scoped_fix"
+assert_rc 0 "only=@acme/scoped → scoped/dotted name ALLOWED (no die)"
+assert_reason "@acme/scoped" "not in allowlist" "scoped target reached processing (host-skip), proving it was allowed past validation"
+assert_not_skipped "alpha" "only=@acme/scoped → non-target alpha plain-continued"
+
+# 13b. A non-whitespace shell metacharacter is still rejected (rejection coverage
+#      isn't whitespace-only).
+ONLY_FIXTURE="a;b"; FREEZE_SHAS_FIXTURE=""; SHA_EXEMPT_FIXTURE=""
+run_bump "$scoped_fix"
+assert_rc 1 "only='a;b' (metachar) → die"
+assert_warn "contains unsafe characters" "only='a;b' → unsafe-char die message"
+
+# 14. The freeze-reconciliation warning block is SKIPPED under a single-plugin run
+#     (the `[[ -z "$ONLY" ]]` gate). Two-sided so the gate is load-bearing: a typo'd
+#     freeze name warns when ONLY is empty, and is suppressed when ONLY is set.
+ONLY_FIXTURE=""; FREEZE_SHAS_FIXTURE="frozn-typo"; SHA_EXEMPT_FIXTURE=""
+run_bump "$only_fix"
+assert_warn "freeze-shas:" "only='' → freeze-reconciliation warning fires (typo'd name)"
+ONLY_FIXTURE="alpha"; FREEZE_SHAS_FIXTURE="frozn-typo"; SHA_EXEMPT_FIXTURE=""
+run_bump "$only_fix"
+assert_no_warn "freeze-shas:" "only=alpha → freeze-reconciliation warning SUPPRESSED (targeted run)"
+
+ONLY_FIXTURE=""  # reset so it can't leak into any later case
 
 echo
 echo "=== $((total-failures))/$total passed ==="

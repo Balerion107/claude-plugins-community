@@ -36,6 +36,12 @@ inputs:
       advance until the name is removed here. Use to hold a plugin at a known
       SHA pending a security review / fix-forward of an upstream change.
     default: ""
+  only:
+    description: >
+      Bump ONLY this plugin name (exact marketplace entry name). Empty = all
+      stale entries (default nightly behavior). Honors the same open-PR skip,
+      sha-exempt, and freeze-shas handling as a full run for the targeted name.
+    default: ""
   claude-cli-version:
     description: Version of @anthropic-ai/claude-code to install
     default: latest
@@ -161,6 +167,7 @@ runs:
         ALLOWED_HOSTS: ${{ inputs.allowed-hosts }}
         SHA_EXEMPT: ${{ inputs.sha-exempt }}
         FREEZE_SHAS: ${{ inputs.freeze-shas }}
+        ONLY: ${{ inputs.only }}
         PR_MODE: ${{ inputs.pr-mode }}
         PR_BRANCH: ${{ inputs.pr-branch }}
         BASE_BRANCH: ${{ inputs.base-branch }}

@@ -34,6 +34,9 @@ jobs:
       - name: bump-plugin-shas skip/freeze tests
         run: bash .github/actions/bump-plugin-shas/test-bump.sh
 
+      - name: bump-plugin-shas manifest-synthesis tests
+        run: bash .github/actions/bump-plugin-shas/test-bump-manifest.sh
+
       - name: External manifest resolution tests
         run: bash .github/actions/validate-plugins/test-external-manifest.sh
 

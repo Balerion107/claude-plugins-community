@@ -36,6 +36,19 @@ SHA_EXEMPT=" ${SHA_EXEMPT:-} "
 # Distinct from SHA_EXEMPT: a frozen entry keeps its sha; an exempt one has none.
 FREEZE_SHAS=" ${FREEZE_SHAS:-} "
 
+# Single-plugin target (operator workflow_dispatch). Empty = bump all stale
+# entries (default nightly behavior). Reject — never sanitize — a value with
+# whitespace or shell metacharacters (same has_unsafe_chars guard bump.sh already
+# applies to url/subdir); the exact whole-name match below is injection-safe with
+# a quoted RHS, and a non-matching name simply bumps nothing. Unlike the
+# freeze-shas charset guard, this does NOT reject scoped/dotted/uppercase names —
+# branch_for() and the marketplace support `@scope/plugin`, `Foo.Bar`, etc., so a
+# narrow [a-z0-9-] regex would `die` on a legitimate target.
+ONLY="${ONLY:-}"
+if [[ -n "$ONLY" ]] && has_unsafe_chars "$ONLY"; then
+  die "only: '$ONLY' contains unsafe characters (whitespace/shell metacharacters)"
+fi
+
 PR_MODE="${PR_MODE:-batch}"
 case "$PR_MODE" in
   batch|per-entry) ;;
@@ -84,7 +97,11 @@ branch_for() {
 # freeze that's the worst failure mode, so surface it loudly. Warning, not
 # fatal: a stale freeze name must not block legitimate bumps of other entries.
 # read -ra (not unquoted $FREEZE_SHAS) so a glob char in the list can't expand.
-if [[ -n "${FREEZE_SHAS// /}" ]]; then
+# Skipped entirely under a single-plugin `only` run: every non-target entry is
+# plain-continued below, so a misconfigured freeze for some OTHER plugin is
+# irrelevant to a targeted dispatch — emitting its warning would just be noise
+# scoped to the wrong plugin. (The target's own freeze still applies in-loop.)
+if [[ -z "$ONLY" && -n "${FREEZE_SHAS// /}" ]]; then
   freeze_external_names=" $(jq -r '.plugins[] | select(.source | type=="object") | .name' -- "$MARKETPLACE_PATH" | tr '\n' ' ')"
   read -ra _freeze_listed <<<"$FREEZE_SHAS"
   for fname in "${_freeze_listed[@]}"; do
@@ -104,6 +121,19 @@ while IFS= read -r entry; do
   checked=$((checked+1))
 
   name="$(jq -r '.name' <<<"$entry")"
+
+  # Single-plugin target: when ONLY is set, skip every entry whose name doesn't
+  # match it exactly. Plain `continue` (NOT skip()) so a targeted run doesn't
+  # record N-1 spurious skips. The matching name falls through to the normal
+  # exempt/freeze/open-PR/validation path below, so it still reports its real
+  # skip reason. Exact whole-name `==`, never a glob/regex (mirrors the
+  # whole-word SHA_EXEMPT/FREEZE_SHAS convention).
+  # CAVEAT: the sha-exempt/freeze gates below additionally require the name to
+  # match ^[a-z0-9][a-z0-9-]{1,63}$, so a scoped/dotted/uppercase target that the
+  # `only` guard intentionally ALLOWS (e.g. @scope/plugin) would bypass those
+  # gates even if listed there — a pre-existing freeze/exempt-charset limitation,
+  # not a regression (the open-PR + validation gates still apply to such a name).
+  if [[ -n "$ONLY" && "$name" != "$ONLY" ]]; then continue; fi
 
   # Deliberately-unpinned entries: nothing to bump. Plain log, not skip() —
   # this is steady-state policy, not a per-run anomaly worth a ::warning.
@@ -206,11 +236,22 @@ while IFS= read -r entry; do
   fi
 
   target="$dest${subdir:+/$subdir}"
-  manifest="$target/.claude-plugin/plugin.json"
-  [[ -f "$manifest" ]] || manifest="$target/plugin.json"
-  if [[ ! -f "$manifest" ]]; then
+  # strict:false (skills-only) externals ship no plugin.json — the marketplace
+  # synthesizes one from inline fields. Mirror validate-plugins
+  # (30-validate-cli-external.sh): synthesize a minimal manifest for them rather
+  # than hard-skipping, else a strict:false entry can NEVER be bumped and drifts
+  # forever. The synthesized file lands in the throwaway clone ($dest, rm -rf'd
+  # below) purely to feed `claude plugin validate` — only the SHA pin is ever
+  # committed, never synthesized content. This INTENTIONALLY widens bumped[]/
+  # pr-urls to include skills-only externals (a new class for downstream
+  # per-entry scan-dispatch + /triage-bump-prs; benign — they read branch/name).
+  # mrc: 0=existing manifest, 2=synthesized (strict:false), 1=none/synth-failed.
+  strict="$(jq -r 'if .strict == false then "false" else "true" end' <<<"$entry")"
+  mrc=0; manifest="$(resolve_external_manifest "$target" "$name" "$strict")" || mrc=$?
+  if [[ "$mrc" -eq 1 ]]; then
     skip "$name" "no plugin manifest at $full_url@${new_sha:0:8}"; rm -rf -- "$dest"; continue
   fi
+  [[ "$mrc" -eq 2 ]] && log "  (strict:false) no plugin manifest in source; synthesized a minimal one — $full_url@${new_sha:0:8}"
   if ! out="$(timeout 120 claude plugin validate "$manifest" 2>&1)"; then
     detail="$(grep -E '❯|Error:' <<<"$out" | head -1 | sed -E 's/^[[:space:]]+//')"
     skip "$name" "validation failed at $full_url@${new_sha:0:8}: ${detail:-$(head -1 <<<"$out")}"

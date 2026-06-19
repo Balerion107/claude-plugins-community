@@ -32,6 +32,13 @@ on:
         description: Cap on plugins bumped this run (each = its own PR)
         required: false
         default: '30'
+      plugin:
+        description: >-
+          Bump ONLY this plugin name (exact entry name; empty = all stale). A
+          frozen/sha-exempt target is still skipped (same as a full run), so a
+          targeted dispatch against such a slug is a deliberate no-op.
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -76,6 +83,7 @@ jobs:
           marketplace-path: .claude-plugin/marketplace.json
           max-bumps: ${{ inputs.max_bumps || '30' }}
           freeze-shas: ${{ steps.freeze.outputs.list }}
+          only: ${{ inputs.plugin }}
           pr-mode: per-entry
           claude-cli-version: latest
 
