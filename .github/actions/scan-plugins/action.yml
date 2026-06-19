@@ -158,7 +158,43 @@ runs:
         CLAUDE_CLI_VERSION: ${{ inputs.claude-cli-version }}
       run: |
         set -euo pipefail
-        npm install -g "@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
+        # See validate-plugins/action.yml for the full rationale. claude-code ships
+        # its runtime as a platform-native OPTIONAL dep fetched by postinstall; on
+        # hosted runners that fetch intermittently stalls or is skipped, leaving
+        # "added 1 package" but no usable `claude` binary. Make the install
+        # self-healing: force the optional dep, verify, re-run the postinstall on a
+        # miss, bound every network step with a timeout, retry with real reinstalls.
+        PKG="@anthropic-ai/claude-code@${CLAUDE_CLI_VERSION}"
+        pkg_root() { echo "$(npm root -g 2>/dev/null || true)/@anthropic-ai/claude-code"; }
+        clean_state() {
+          local root; root="$(pkg_root)"
+          [[ "$root" == */node_modules/@anthropic-ai/claude-code ]] && rm -rf "$root" 2>/dev/null || true
+          npm cache clean --force >/dev/null 2>&1 || true
+        }
+        install_attempt() { timeout -k 10 300 npm install -g --include=optional "$PKG"; }
+        heal_postinstall() {
+          local root; root="$(pkg_root)"
+          if [[ -f "$root/install.cjs" ]]; then
+            echo "claude binary missing after install; running postinstall: $root/install.cjs"
+            timeout -k 10 300 node "$root/install.cjs" || true
+          fi
+        }
+        ok=""
+        for attempt in 1 2 3; do
+          echo "::group::Install claude CLI (attempt ${attempt}/3)"
+          [[ "$attempt" -gt 1 ]] && clean_state
+          install_attempt || echo "npm install attempt ${attempt} failed or timed out"
+          if claude --version 2>/dev/null; then ok=1; echo "::endgroup::"; break; fi
+          heal_postinstall
+          if claude --version 2>/dev/null; then ok=1; echo "::endgroup::"; break; fi
+          echo "::endgroup::"
+          [[ "$attempt" -lt 3 ]] && sleep $((attempt * 10))
+        done
+        if [[ -z "$ok" ]]; then
+          echo "::error::claude CLI did not become usable after 3 attempts (native-binary fetch failing — see logs above)." >&2
+          echo "diag: node=$(node --version 2>/dev/null) npm=$(npm --version 2>/dev/null) omit=$(npm config get omit 2>/dev/null)" >&2
+          exit 1
+        fi
         claude --version
 
     - name: Scan
