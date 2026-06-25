@@ -24,7 +24,7 @@ COMMON_SH="$ACTION_PATH/../validate-plugins/lib/common.sh"
 [[ -f "$COMMON_SH" ]] || { echo "FATAL: real common.sh not found at $COMMON_SH" >&2; exit 1; }
 
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-failures=0; total=0
+failures=0; total=0; skipped=0
 
 # Stub HEAD the git shim reports for every ls-remote (40 hex, distinct from every
 # fixture's old sha so new != old → each entry is "stale").
@@ -95,7 +95,11 @@ case "$1" in
     exit 0 ;;
   api)
     case "$2" in
-      graphql) cat >/dev/null 2>&1 || true; echo "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; exit 0 ;;  # createCommitOnBranch oid
+      graphql)
+        # Tee the createCommitOnBranch payload to $GQL_LOG (set by run_bump) so a test
+        # can assert the per-entry commit CONTENT; else preserve the stdin-sink default.
+        if [ -n "${GQL_LOG:-}" ]; then cat >> "$GQL_LOG" || true; else cat >/dev/null 2>&1 || true; fi
+        echo "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; exit 0 ;;  # createCommitOnBranch oid
       -X)      exit 0 ;;                                        # POST/PATCH .../git/refs
       *)       echo "cccccccccccccccccccccccccccccccccccccccc"; exit 0 ;;  # repos/.../git/ref/heads/<base> .object.sha
     esac ;;
@@ -119,7 +123,7 @@ mk() { local f="$TMP/$1.json"; cat > "$f"; printf '%s' "$f"; }
 work=""
 run_bump() {
   work="$TMP/work.json"; cp "$1" "$work"
-  : > "$TMP/out.txt"; : > "$TMP/sum.md"
+  : > "$TMP/out.txt"; : > "$TMP/sum.md"; : > "$TMP/graphql.log"
   set +e
   OUT="$(
     PATH="$TMP/bin:$PATH" \
@@ -130,6 +134,7 @@ run_bump() {
     GH_TOKEN="dummy" GITHUB_REPOSITORY="acme/repo" \
     ONLY="${ONLY_FIXTURE:-}" OPEN_PR_BRANCH="${OPEN_PR_BRANCH:-}" \
     RUN_URL="https://github.com/acme/repo/actions/runs/1" \
+    GQL_LOG="$TMP/graphql.log" \
     GITHUB_OUTPUT="$TMP/out.txt" GITHUB_STEP_SUMMARY="$TMP/sum.md" \
     bash "$ACTION_PATH/scripts/bump.sh" 2>&1
   )"
@@ -182,6 +187,51 @@ assert_not_skipped() {  # NAME LABEL
   else echo "  FAIL $2 — '$1' unexpectedly in skipped[]"; failures=$((failures+1)); fi
 }
 
+# @base64d is jq 1.6+. CI (ubuntu) ships 1.6+; the guard only matters for a dev on an
+# old macOS with system jq 1.5 — a clean visible SKIP beats a silent `jq: error`. Probe once.
+HAVE_B64D=1; jq -n '"" | @base64d' >/dev/null 2>&1 || HAVE_B64D=0
+
+# assert_commit_isolates BRANCH TARGET TGT_SHA SIB1 SIB1_SHA SIB2 SIB2_SHA LABEL
+# Decode the createCommitOnBranch payload the gh graphql shim tee'd to $GQL_LOG for
+# BRANCH and assert it bumps ONLY TARGET (to TGT_SHA) while both siblings keep their
+# fixture (base) shas — i.e. per-entry commits are INDEPENDENT, built from
+# base_marketplace_content + only this entry's bump, not stacked. NOTE: the synth run
+# opens TWO commits (bump/alpha AND bump/charlie); select(.variables.branch==$br)
+# isolates THIS branch's payload from the others in the log. (beta is skipped — no
+# manifest — so it produces NO graphql entry; the log holds exactly one object per
+# non-skipped bumped plugin.)
+assert_commit_isolates() {
+  # A SKIP must NOT inflate the pass tally (`$((total-failures))/$total passed`), so only
+  # count this assertion toward total AFTER the capability guard — a jq<1.6 SKIP is then
+  # neither pass nor fail (visible via the SKIP line, absent from the count).
+  if [[ "$HAVE_B64D" != 1 ]]; then echo "  SKIP $8 — jq 1.6+ (@base64d) required to decode the commit payload"; skipped=$((skipped+1)); return; fi
+  total=$((total+1))
+  local content t s1 s2
+  # `|| content=""` makes the empty-content guard reachable on BOTH failure shapes: a valid
+  # log with no matching branch (jq exits 0, empty) AND a malformed log (jq errors) — without
+  # it, set -e would abort the whole suite on a jq parse error before the guard runs. Either
+  # way an absent/garbled payload for this branch is a LOUD FAIL here.
+  content="$(jq -rs --arg br "$1" '.[]|select(.variables.branch==$br)|.variables.contents|@base64d' "$TMP/graphql.log" 2>/dev/null)" || content=""
+  if [[ -z "$content" ]]; then echo "  FAIL $8 — no graphql payload for branch '$1'"; failures=$((failures+1)); return; fi
+  t="$(jq -r --arg n "$2" '.plugins[]|select(.name==$n)|.source.sha' <<<"$content")"
+  s1="$(jq -r --arg n "$4" '.plugins[]|select(.name==$n)|.source.sha' <<<"$content")"
+  s2="$(jq -r --arg n "$6" '.plugins[]|select(.name==$n)|.source.sha' <<<"$content")"
+  if [[ "$t" == "$3" && "$s1" == "$5" && "$s2" == "$7" ]]; then echo "  PASS $8"
+  else echo "  FAIL $8 — $2=$t (want $3) $4=$s1 (want $5) $6=$s2 (want $7)"; failures=$((failures+1)); fi
+}
+
+# assert_no_commit BRANCH LABEL — NO createCommitOnBranch payload was sent for BRANCH.
+# A plain-continued / skipped entry must NOT commit, so the shim must have tee'd zero
+# payloads for its branch. Count-only (no @base64d decode → no capability guard needed);
+# `jq -s` over an empty/no-match log yields length 0.
+assert_no_commit() {
+  total=$((total+1))
+  local n
+  n="$(jq -rs --arg br "$1" '[.[]|select(.variables.branch==$br)]|length' "$TMP/graphql.log" 2>/dev/null)" || n=""
+  if [[ "$n" == "0" ]]; then echo "  PASS $2"
+  else echo "  FAIL $2 — expected 0 payloads for '$1', got '$n'"; failures=$((failures+1)); fi
+}
+
 echo "=== bump-plugin-shas manifest-synthesis tests (per-entry) ==="
 
 # A 3-entry fixture, all on github.com, no subdir (so the no-op subtree probe is
@@ -214,6 +264,26 @@ assert_bumped      "charlie"                                 "default-strict + r
 # commit/PR path is unverified and a regression there would pass silently.
 assert_out         "Opened PR"                               "per-entry commit+PR phase ran (PR opened)"
 assert_pr_opened   "alpha" "bump/alpha"                      "synthesized entry produced a per-entry PR on bump/alpha"
+assert_pr_opened   "charlie" "bump/charlie"                  "second bumped entry produced its own per-entry PR on bump/charlie"
+# Per-entry commit INDEPENDENCE: decode alpha's committed marketplace.json and prove it
+# carries ONLY alpha's bump. charlie=3333 here is the independence LEVER — charlie bumps
+# on its OWN branch (bump/charlie), but in alpha's commit it must stay at base 3333.
+# Under the bump.sh mutation (per-entry commit built from $MARKETPLACE_PATH, which
+# accumulates ALL bumps, instead of base_marketplace_content) charlie would be aaaa here
+# → this assertion FAILs, proving it is not hollow.
+assert_commit_isolates "bump/alpha" \
+  "alpha"   "$HEAD_SHA" \
+  "beta"    "2222222222222222222222222222222222222222" \
+  "charlie" "3333333333333333333333333333333333333333" \
+  "alpha's per-entry commit bumps ONLY alpha (beta/charlie at base shas)"
+# Symmetric check on charlie's OWN commit — catches an ASYMMETRIC stacking bug (e.g. only
+# the 2nd+ per-entry commit stacks) that the alpha-only assertion would miss. In charlie's
+# commit: charlie=aaaa (bumped HEAD), alpha=1111 (base), beta=2222 (base).
+assert_commit_isolates "bump/charlie" \
+  "charlie" "$HEAD_SHA" \
+  "alpha"   "1111111111111111111111111111111111111111" \
+  "beta"    "2222222222222222222222222222222222222222" \
+  "charlie's per-entry commit bumps ONLY charlie (alpha/beta at base shas)"
 
 echo
 echo "--- ONLY + synthesis intersection ---"
@@ -229,6 +299,18 @@ assert_not_bumped  "charlie"                                 "only=alpha → cha
 assert_not_bumped  "beta"                                    "only=alpha → beta (non-target) not bumped"
 assert_not_skipped "beta"                                    "only=alpha → beta plain-continued (not in skipped[])"
 assert_not_skipped "charlie"                                 "only=alpha → charlie plain-continued (not in skipped[])"
+# ONLY-mode COMMIT CONTENT: only=alpha drives the SAME per-entry commit path (a distinct
+# bump.sh slice from the all-entries run) and tees a fresh bump/alpha payload (run_bump
+# truncated $GQL_LOG, so it holds only this run's payloads). Decode it: the target's new
+# sha must be correct and siblings at base — AND no non-target (charlie) may commit at all
+# (the load-bearing only-mode contract: a single target → exactly one commit).
+assert_commit_isolates "bump/alpha" \
+  "alpha"   "$HEAD_SHA" \
+  "beta"    "2222222222222222222222222222222222222222" \
+  "charlie" "3333333333333333333333333333333333333333" \
+  "only=alpha commit carries alpha's new sha; siblings at base"
+assert_no_commit "bump/charlie" "only=alpha → non-target charlie did NOT commit (no payload)"
+assert_no_commit "bump/beta"    "only=alpha → non-target beta did NOT commit (no payload)"
 
 echo
 echo "--- per-entry open-PR early-skip ---"
@@ -283,5 +365,9 @@ assert_bumped      "withskills"                              "strict:false + pre
 assert_not_skipped "withskills"                              "present-subdir entry NOT skipped"
 
 echo
-echo "=== $((total-failures))/$total passed ==="
+# Surface a non-zero SKIP count so a jq<1.6 run (where the isolation assertions SKIP) is
+# NOT laundered into a clean-looking "N/N passed" — the check was narrower, say so.
+_tally="=== $((total-failures))/$total passed"
+[ "${skipped:-0}" -gt 0 ] && _tally="$_tally (${skipped} skipped)"
+echo "$_tally ==="
 [[ "$failures" -eq 0 ]]
