@@ -998,8 +998,10 @@
       "name": "aic",
       "description": "Local-first MCP server that sits transparently between your AI editor and any model, classifying intent, selecting the right files, and compiling focused context — with zero manual invocation.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/Jatbas/agent-input-compiler.git",
+        "path": "integrations/claude/plugin",
+        "ref": "main",
         "sha": "9cfd5632e4574fb11f8304ea548605d26134678a"
       },
       "homepage": "https://github.com/Jatbas/agent-input-compiler"
@@ -1784,8 +1786,10 @@
       "name": "artillery-mcp",
       "description": "Artillery 2.x load-testing via MCP — one-command install for @kosiakmd/artillery-mcp. Ships a stdio MCP server with 18 tools (run_test_from_file, run_fargate, read_artillery_output, parse_results, run_report, compare_results, etc.) plus an agent SKILL.md with decision tree, call patterns, and gotchas. Config-driven: drop an .artillery-mcp.config.json at your project root and a 19th run_project_lt tool appears for one-liner flow×environment launches. Uses the published @kosiakmd/artillery-mcp npm package via npx caret-minor pin (patch fixes flow through automatically). MIT, open source, multi-arch Docker image also available. Prerequisites: Node 20+, artillery CLI on PATH.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/kosiakMD/artillery-mcp-plugin.git",
+        "path": "plugins/artillery-mcp",
+        "ref": "main",
         "sha": "2dc3ce67b9672b35f30156ff5f21855f05352d12"
       },
       "homepage": "https://github.com/kosiakMD/artillery-mcp"
@@ -7294,8 +7298,10 @@
       "name": "discord-threads",
       "description": "Discord plugin for Claude Code with per-session thread routing. Fork of the official Discord plugin with added support for session-isolated threads and full permission context in messages.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/AxiumFoundry/claude-discord-threads-plugin.git",
+        "path": "plugins/discord-threads",
+        "ref": "main",
         "sha": "e0755fd9c3d8fd87ec77195d3ab217da758d60b5"
       },
       "homepage": "https://github.com/AxiumFoundry/claude-discord-threads-plugin"
@@ -11193,8 +11199,10 @@
       "name": "kauri",
       "description": "Deterministic decision records for agents and humans. Local-first + team support. Supports both project-level and user-level scopes.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/mhashim6/kauri.git",
+        "path": "plugins/claude-code",
+        "ref": "master",
         "sha": "77d62b22a964ee15bbb74e24682eff47cf6da0f9"
       },
       "homepage": "https://github.com/mhashim6/kauri"
@@ -12814,8 +12822,10 @@
       "name": "memex-mcp",
       "description": "Persistent memory for AI coding agents. Builds a temporal knowledge graph of your codebase from commits and source files, then serves it through 14 MCP tools so every Claude Code session starts knowing your architecture, recent decisions, and open problems — no more cold starts or context pasting. Bitemporal facts (every edge knows when it was true), two-regime confidence decay (unvalidated facts cross stale at exactly 30 days), hierarchical Leiden clusters keep get_project_context under 1500 tokens for any repo size, and human-in-the-loop validation. Backed by Neo4j + Graphiti + Gemini Flash. Also publishes to PyPI and npm.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/STiFLeR7/claude-plugins.git",
+        "path": "memex-mcp",
+        "ref": "master",
         "sha": "506f757770e23c27addccd7919ca39775a653d34"
       },
       "homepage": "https://github.com/STiFLeR7/claude-plugins"
@@ -21741,8 +21751,10 @@
       "name": "voice-bridge",
       "description": "Give Claude Code a voice with multi-engine text-to-speech. Speaks responses aloud using 5  TTS engines (edge-tts, ElevenLabs, Kokoro, macOS say, espeak-ng). Free by default.  edge-tts uses Microsoft Neural voices with no API key. Includes a Stop hook for automatic speech, a /speak skill for on-demand use, and an MCP server with speak, set_engine, get_status, and list_voices tools. Text is automatically filtered to remove code blocks, API keys, file paths, and markdown before speaking.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/Tomorrow-You/voice-bridge.git",
+        "path": "claude-plugin",
+        "ref": "main",
         "sha": "113e0bc68e98908a199af9c95475ca0f9c0d0c8a"
       },
       "homepage": "https://pypi.org/project/ai-voice-bridge/"
