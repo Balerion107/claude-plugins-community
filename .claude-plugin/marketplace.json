@@ -182,8 +182,10 @@
       "name": "achilles-ep-delphi",
       "description": "Agent safety infrastructure (RiskOracle, NoLeak, MemGuard, SecureExec, FlowCore) and real-time DELPHI Oracle intelligence signals. x402 USDC micropayments on Base Mainnet. 19 tools across 2 MCP servers.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/achilliesbot/achilles-ep-delphi-plugin-marketplace.git",
+        "path": "plugins/achilles-ep-delphi",
+        "ref": "main",
         "sha": "db9b1a2628ab8393b1ec73a8ed1fe167126fee45"
       },
       "homepage": "https://achillesalpha.onrender.com/"
@@ -609,8 +611,10 @@
       "name": "agent4s",
       "description": "Scala code intelligence for AI coding agents. 35 commands — search,\njump-to-definition, find references, call-graph, dead code detection, semantic\nrename, bug-hunt with taint analysis, scaffolding — all without a build\nserver or compilation. Cold index 2.7s, warm 349ms on 18k files. Bug-hunt\nscans 45 vulnerability patterns (SQL injection, XSS, SSRF, hardcoded secrets, weak crypto, concurrency bugs) with cross-file taint analysis. SemanticDB integration for type-aware mode when compiled artifacts are available. Native binaries for macOS, Linux, and Windows. Works as a Claude Code plugin, MCP server (Cursor, Windsurf, Cline), or standalone CLI.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/scala-digest/agent4s.git",
+        "path": "plugins/agent4s",
+        "ref": "main",
         "sha": "f1cfbc864692783694aa4a81784733864591a540"
       },
       "homepage": "https://github.com/scala-digest/agent4s/blob/main/README.md"
@@ -1212,8 +1216,10 @@
       "name": "almanax-security",
       "description": "Scan Git commits for security vulnerabilities using Almanax directly from Claude Code. The plugin connects to the Almanax MCP server to analyze commit diffs, surface findings by severity, and help you fix issues — all without leaving your terminal. Includes guided setup and support for scanning individual commits or commit ranges.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/almanax-ai/almanax-security-plugin.git",
+        "path": "plugins/almanax-security",
+        "ref": "main",
         "sha": "cd91668e2ca6843f5ca767e4900b022f2e218756"
       },
       "homepage": "https://docs.almanax.ai/integration/mcp.html"
@@ -1790,8 +1796,10 @@
       "name": "asdd",
       "description": "Agentic Specification-Driven Development (ASDD) is a framework for building software using AI-assisted specifications, autonomous agents, and production learning loops. It transforms the traditional development lifecycle into a structured pipeline where specifications are the central artifact coordinating both humans and AI agents.\nASDD enables engineering teams to achieve dramatically higher output while maintaining architectural quality, security, and system observability by moving from human-centric agile processes to AI-native engineering.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/ffactory-inc/asdd.git",
+        "path": "claude-plugins/asdd",
+        "ref": "main",
         "sha": "aaae256486a85b5acf2c82ede0832b11732c6a09"
       },
       "homepage": "https://ffactory-inc.github.io/asdd"
@@ -2864,8 +2872,10 @@
       "name": "byom-review",
       "description": "Code review with any AI model via OpenRouter. Run standard and adversarial reviews against your working tree or branch using Claude, GPT,  Gemini, Llama, or any other model available on OpenRouter. Returns structured findings with severity, confidence, and actionable\nrecommendations. Includes cost tracking per review.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/jkrish/byom-code-review.git",
+        "path": "plugins/byom-review",
+        "ref": "main",
         "sha": "e96648fbafc973d83ae5616cde509a8460f356ba"
       },
       "homepage": "https://github.com/jkrish/byom-code-review"
@@ -2985,8 +2995,10 @@
       "name": "carsxe",
       "description": "The CarsXE Plugin for Claude Code provides direct access to our comprehensive automotive APIs through simple commands and auto-invoked skills. Decode VINs, look up license plates, get market values, check vehicle history, recalls, liens, OBD codes, and more — all within your Claude Code environment.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/carsxe/carsxe-claude-plugin.git",
+        "path": "carsxe",
+        "ref": "main",
         "sha": "68b5858d1cb4b1b06f9cd292ef6b29a16e33f508"
       },
       "homepage": "https://api.carsxe.com/docs/integrations/claude-quickstart"
@@ -3029,8 +3041,10 @@
       "name": "cascade",
       "description": "AI-native coordination for multi-service development. Orchestrates cross-cutting changes across microservices with dependency-aware propagation, automatic contract sync, and cross-service verification.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/alibrahim/cascade.git",
+        "path": "plugins/cascade",
+        "ref": "main",
         "sha": "8aa72d37c035cd20027ab525059d36fe16e718b4"
       },
       "homepage": "https://github.com/alibrahim/cascade"
@@ -3393,9 +3407,11 @@
       "name": "chucks",
       "description": "Chucks is an AI assistant for Dungeon Masters. It helps with D&D 5e prep work, starting with encounter building — generating balanced monster rosters based on party size, level, and difficulty.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/chucks-ai/claude.git",
-        "sha": "b4fd06ea2c3c3aa0b8514c6fa7711ee899168bef"
+        "path": "plugins/chucks",
+        "ref": "main",
+        "sha": "bbb019bd12577fab518283105c2bcda5ba55605b"
       },
       "homepage": "https://www.chucks.ai/"
     },
