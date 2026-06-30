@@ -706,8 +706,10 @@
       "name": "agentic-teams",
       "description": "A modular plugin that packs specialised agents into teams and allows user to interact with them at the higher level of abstraction. Like with real-world company departments.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/rustamfi/agentic-teams.git",
+        "path": "plugins/dev-team",
+        "ref": "main",
         "sha": "756319d0185c05108c51ee4d83e07ffe93da5004"
       },
       "homepage": "https://github.com/rustamfi/agentic-teams"
@@ -1024,9 +1026,11 @@
       "name": "aio-design-system",
       "description": "All in one skills about software design, UI/UX",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/aiocean/claude-plugins.git",
-        "sha": "bd44dc397241c51c8a3704c86214dc1afaeefd2c"
+        "path": "plugins/aio-design-system",
+        "ref": "main",
+        "sha": "a7033b9d6742e84c715c459c70f2d88fd79dd8a8"
       },
       "homepage": "https://aiocean.github.io/claude-plugins/"
     },
@@ -1303,8 +1307,10 @@
       "name": "analyst-never-sleep",
       "description": "Your personal analyst. Always on. Never sleeps.   \n                            \nBuilt for fundamental investors who want an edge with hours of researched prepared when you wake up, in your own way.\n                                                                                \n What it does for you:                                                         \n   \n  - Never miss a market move — wake up to a structured daily briefing covering macro shifts, sector moves, and news on your watchlist\n  - Cut research time in half — run a full company deep dive in seconds, not hours. Financials, thesis, risks, all in one shot                             \n  - Walk into earnings ready — get a pre-earnings framework before the call and a post-earnings breakdown after                                               \n  - Think in memos, not notes — turn your thesis into a clean, shareable investment memo with one command                                              \n  - Track what matters — manage your watchlist in plain English. Levels, catalysts, conviction — all in one place                                      \n                  \n  Who it's for:                                                                 \n  Retail investors, self-directed traders, and finance students who think like analysts but don't have a research team behind them.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/kmmz/analyst_never_sleep.git",
+        "path": "investment-analyst",
+        "ref": "main",
         "sha": "4ffe0586bc3c83f491ccad295b56c281fc5791e2"
       },
       "homepage": "https://github.com/kmmz/analyst_never_sleep"
@@ -5015,8 +5021,10 @@
       "name": "clearskies-cowork-plugin",
       "description": "Clearskies connects Salesforce, Gong, Scratchpad, Google, Microsoft, and Slack into a Customer Context Graph — a live, unified view of every account — then exposes it to Claude via MCP. The Cowork plugin puts that on top of six native GTM workflows: account briefs, deal risk scoring, call prep, post-call summaries, pipeline review, and personalized outreach. Works standalone; supercharged when connected to your GTM stack.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/scratchpad-ai/clearskies-cowork-plugin.git",
+        "path": "plugins/clearskies",
+        "ref": "main",
         "sha": "49cc0357709b6d8c47945c1932d1abfab2143035"
       },
       "homepage": "https://github.com/scratchpad-ai/clearskies-cowork-plugin"
@@ -5105,8 +5113,10 @@
       "name": "closed-rings",
       "description": "Closed Rings is a CLI-first time tracker for developers and freelancers. You open a ring when you start a task, close it when you ship, and the tool captures everything in between — context switches, focus blocks, project totals — so you can stop reconstructing your week from memory. Standup summaries, focus reports, and invoice-ready exports come for free.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/samacs/closedrings-mcp.git",
+        "path": "plugins/closedrings",
+        "ref": "main",
         "sha": "ab390354c829bf4640f7c2f8d7b2fac3932fe38a"
       },
       "homepage": "https://closedrings.sh/"
@@ -8901,8 +8911,10 @@
       "name": "gemini-plugin-cc",
       "description": "Use gemini-plugin-cc from inside Claude Code for code reviews, task delegation, and multimodal analysis.\nLeverages Gemini's native vision capabilities for UI screenshot reviews, audio/video analysis, and large context window (1M+ tokens) for codebase-wide analysis. An unofficial community adaptation of codex-plugin-cc for Gemini CLI.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/shalomeir/gemini-plugin-cc.git",
+        "path": "plugins/gemini",
+        "ref": "main",
         "sha": "7169adb4f5aa54b885bc77dd00eaa0a15122209a"
       },
       "homepage": "https://github.com/shalomeir/gemini-plugin-cc"
@@ -13870,8 +13882,10 @@
       "name": "niw-skills",
       "description": "Open-source plugin for U.S. EB-2 National Interest Waiver (NIW) case work. Honest pre-filing legal evaluation of self-petitions under the current USCIS adjudication standard, with the preponderance-of-the-evidence burden applied prong by prong under Matter of Dhanasar. Built for three cohorts: DIY self-petitioners ready to file, prospective applicants 6–24 months out, and master's/PhD students 3–5 years out who want a multi-year roadmap before committing.\n\nKey features:\n\n• Agentic 5-stage conversation — orient → co-design your proposed endeavor → confirm → full evaluation → follow-ups. Adapts to what you know and what you've provided; produces a clean structured memo, not an engineering trace.\n• Citation discipline — every legal rule cites authority inline (Dhanasar, Chawathe, Katigbak, USCIS Policy Manual Vol. 6 Pt. F Ch. 5, and curated AAO decisions).\n• Verdict floor under preponderance — no inflated assessments. No prong is rated \"Strong\" without documented evidence clearing preponderance.\n• Hard anti-hallucination rules — no invented citation counts, grant roles, employer facts, or AAO decision IDs.\n• Achievable case ceiling — beyond the current-state verdict, the plugin produces a roadmap of concrete prerequisite actions and an honest 0–60 month timeline to reach a stronger case.\n• AC21 framing for India/China nationals — surfaces the practical reason most backlogged-country petitioners file NIW: an approved I-140 unlocks indefinite H-1B extension under AC21 § 104(c) and § 106(a).\n• Written for international, ESL-primary, highly-educated users — short sentences, technical terms explained on first use, citations in standard form, no idioms.\n\nFuture skills shipping in this plugin: endeavor-statement drafter, petition-letter drafter, evidence finder, recommendation-letter drafter, RFE/NOID analyzer.\n\nNot legal advice. Not a substitute for licensed immigration counsel. See DISCLAIMER.md.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/thepaperscompany/niw-skills.git",
+        "path": "thepapers-niw",
+        "ref": "main",
         "sha": "120482b13cec359b391d84963c73838c37dc7196"
       },
       "homepage": "https://github.com/thepaperscompany/niw-skills"
@@ -14596,8 +14610,10 @@
       "name": "orchestrator-workflow-plugin",
       "description": "A multi-agent development framework that splits project builds into phases using three specialized roles: an Orchestrator (plans and coordinates), Workers (implement code), and Reviewers (validate quality). Keeps your main agent focused on architecture while sub-agents handle implementation and code review through a structured delegation loop.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/DuckrOverload/duckr-plugins.git",
+        "path": "plugins/orchestrator-workflow-plugin",
+        "ref": "main",
         "sha": "db8561a3e826b438ad0b915b6828881aff84bbbd"
       },
       "homepage": "https://github.com/DuckrOverload/duckr-plugins"
@@ -19599,8 +19615,10 @@
       "name": "supermetrics",
       "description": "Battle-tested marketing analytics workflows for six personas — performance marketers, marketing leaders, demand gen, content, field, and eCommerce — built on top of the Supermetrics connector. 42 workflows total, with helper scripts, deliverable templates, and a consistent visualization framework.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/supermetrics-public/claude-marketing-plugin.git",
+        "path": "plugins/supermetrics-marketing",
+        "ref": "main",
         "sha": "ec16372eda880e58b1f97bca481e2a7b1bdc3a4d"
       },
       "homepage": "https://supermetrics.com/products/claude"
