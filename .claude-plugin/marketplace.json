@@ -3041,8 +3041,10 @@
       "name": "cartographer",
       "description": "Agent-first code understanding system. Builds a persistent world-model of your codebase with evidence-grounded facts, visual map projections, and inspectable source anchors.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/miltonian/cartographer.git",
+        "path": "plugin",
+        "ref": "main",
         "sha": "1b7f2098ef95c8590a494749601525d6d2720294"
       },
       "homepage": "https://github.com/miltonian/cartographer"
@@ -6174,8 +6176,10 @@
       "name": "coworker",
       "description": "Autonomous PM for Claude Code. Delegate coding tasks to your local Claude Code CLI, iterate with session resumption, keep a running project state without burning orchestrator context.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/ibrhmyi/coworker.git",
+        "path": "plugin",
+        "ref": "main",
         "sha": "136108440539bcf4c1fe609d065635ed0d60533a"
       },
       "homepage": "https://github.com/ibrhmyi/coworker"
@@ -8038,8 +8042,10 @@
       "name": "enrichlayer",
       "description": "Give Claude access to billions of company and person profiles, work emails, contacts, school and job data via the Enrich Layer API. Turns Claude into a recruiter, an SDR, an account researcher — with one plugin and your API key.\n\nIncludes 25 MCP tools (company/person profiles, employee lookup, work email retrieval, role lookup, reverse email/phone, job search, school data, company and person search, credit balance) and 4 composed skills (find-decision-maker, research-account, find-work-email, enrich-csv) that chain those tools into common sales, recruiting, and research workflows.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/enrichlayer/claude-plugins.git",
+        "path": "plugins/enrichlayer",
+        "ref": "main",
         "sha": "dc1ac1df82db67c28bbd30bd36b86bd71c871580"
       },
       "homepage": "https://enrichlayer.com"
@@ -13870,8 +13876,10 @@
       "name": "nitrograph",
       "description": "Nitrograph is a service-discovery network for agents. It helps probabilistic agents transact with deterministic headless payment endpoints. This plugin lets Claude search a curated registry of agent-usable APIs (x402, MPP, and standard HTTP) ranked by trust, reliability, and price, then fetch the exact endpoints, OpenAPI spec, gotchas, and proven multi-step patterns needed to call them. No API key required: free tier with x402 USDC pay-to-continue on Base when the quota  is exhausted. Adds four MCP tools (nitrograph_discover, nitrograph_service_detail, nitrograph_report_outcome, nitrograph_report_pattern) and a /discover slash command.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/nitrographtech/claude-plugins.git",
+        "path": "plugins/nitrograph",
+        "ref": "main",
         "sha": "0f1fa0753860fc3e67ceef6f94d97ef97931491c"
       },
       "homepage": "https://www.nitrograph.com"
@@ -16199,8 +16207,10 @@
       "name": "pylipidparse",
       "description": "PyLipidParse is a plugin to convert standard lipid shorthand notation (LIPID MAPS, SwissLipids, HMDB) to molecular structures with full stereochemistry information.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/MontgomeryBohde/PyLipidParse.git",
+        "path": "claude-code-plugin",
+        "ref": "main",
         "sha": "12f43a21c136ff51639941fcb96891bbcfdd7085"
       },
       "homepage": "https://montgomerybohde.github.io/PyLipidParse/"
@@ -16981,8 +16991,10 @@
       "name": "roomie-kit",
       "description": "Roomie Kit helps developers bootstrap, customize, and validate open-source realtime apps built with virtual rooms, livestreaming, video chat, games, Supabase, Agora, Vercel, and Capacitor. The plugin connects Claude Code to the Roomie Kit CLI so paid Roomie Kit Cloud users can log in, create a starter project, run setup checks, customize branding/assets, and troubleshoot deployments from inside their editor.",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/davidkc0/roomie-kit-plugins.git",
+        "path": "plugins/claude-roomie-kit",
+        "ref": "main",
         "sha": "cdfc43389f20d78a839dee731f0d37592abf3f77"
       },
       "homepage": "https://roomiekit.io"
