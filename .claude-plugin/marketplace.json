@@ -20442,9 +20442,11 @@
       "name": "tinyfish",
       "description": "Gives your agent a toolkit to access and work with anything one the web. Spin up a dedicated agent to retrieve data, fill in forms, or perform fast indexed search on a topic, or fetch the contents of a webpage as markdown, or even rent your own browser via CDP and take action on it! You can do anything on the web, with TinyFish!",
       "source": {
-        "source": "url",
+        "source": "git-subdir",
         "url": "https://github.com/tinyfish-io/tinyfish-cookbook.git",
-        "sha": "d8663c2c28b98a2e8c03d93ec81bb7f1eae37321"
+        "path": "plugins/tinyfish",
+        "ref": "main",
+        "sha": "eacd0a00f2d7329e9c23a40af2b8c5aab25f36b1"
       },
       "homepage": "https://docs.tinyfish.ai"
     },
