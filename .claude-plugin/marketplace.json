@@ -9184,16 +9184,6 @@
       "homepage": "https://githits.com/"
     },
     {
-      "name": "github",
-      "description": "GitHub workflows via the gh CLI: triage PRs and issues, debug failing CI checks, address review comments, and publish changes. Skills-based — no remote MCP server or static tokens required, uses gh auth login \n  for authentication via OS keyring.",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/axisrow/claude-plugins-official.git",
-        "sha": "f23433560f4b85368a73c78a7df874abea6f446a"
-      },
-      "homepage": "https://github.com/axisrow/claude-plugins-official/tree/main/external_plugins/github"
-    },
-    {
       "name": "github-cli-health-check",
       "description": "Scheduled health check plugin for the GitHub CLI (gh). Verifies that gh is installed, authenticated, can list repositories, and has sufficient API rate limit remaining. Saves a structured pass/fail report to the workspace.",
       "source": {
@@ -19499,16 +19489,6 @@
         "sha": "7b3499af5018d19c55daabf8272aaa265df928b3"
       },
       "homepage": "https://github.com/PaulieB14/subgraphs-skills"
-    },
-    {
-      "name": "submit-skills",
-      "description": "Plugin description*\n  Submit-skills streamlines the end-to-end process of packaging and submitting custom Claude Code skills to the official plugin marketplace. It\n  automates plugin structure creation, performs name compliance checks to flag sensitive wording that could cause rejection, translates Chinese\n  skill definitions to English for review compatibility, handles GitHub hosting via fork and push, and generates all required form field content\n  including descriptions, use cases, and privacy policy URLs. Every step is confirmed with the user before execution, making the submission\n  workflow reliable and transparent.",
-      "source": {
-        "source": "url",
-        "url": "https://github.com/SAKEH0017/claude-plugins-official.git",
-        "sha": "ac007363014c0761454aafc37f972aa4fc5dc0c1"
-      },
-      "homepage": "https://github.com/SAKEH0017/claude-plugins-official"
     },
     {
       "name": "subotiz-plugin",
