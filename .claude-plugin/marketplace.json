@@ -23571,6 +23571,17 @@
       "description": "Descope authentication skills: integration, Auth0/Okta/WorkOS/Stytch migration, Terraform, FGA authorization schemas, security review, and BYOS custom UI",
       "category": "development",
       "homepage": "https://github.com/descope/skills"
+    },
+    {
+      "name": "mulmocast",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/receptron/mulmocast-claude-plugin",
+        "sha": "480628a00e767016ead0a44da864a0ed7f05158e"
+      },
+      "description": "MulmoCast skills for Claude Code — create, narrate, and extend video presentations from any input",
+      "category": "productivity",
+      "homepage": "https://github.com/receptron/mulmocast-claude-plugin"
     }
   ]
 }
