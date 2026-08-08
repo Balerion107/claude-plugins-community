@@ -374,6 +374,12 @@ create_signed_commit() {
   | gh api graphql --input - --jq '.data.createCommitOnBranch.commit.oid'
 }
 
+pr_create_denied() {
+  local msg="$1"
+  [[ "$msg" == *"GitHub Actions is not permitted to create or approve pull requests"* ]] \
+    || [[ "$msg" == *"Resource not accessible by integration"* ]]
+}
+
 if [[ "$PR_MODE" == "per-entry" ]]; then
   # ──────────────────────────────────────────────────────────────────────────
   # Per-entry mode: one branch + one commit + one PR per bumped plugin.
@@ -421,8 +427,19 @@ if [[ "$PR_MODE" == "per-entry" ]]; then
       pr_url="$existing"
       log "Updated existing PR: $pr_url"
     else
-      pr_url="$(gh pr create --base "$BASE_BRANCH" --head "$branch" \
-        --title "$commit_msg" --body-file "$body_file")"
+      set +e
+      pr_out="$(gh pr create --base "$BASE_BRANCH" --head "$branch" \
+        --title "$commit_msg" --body-file "$body_file" 2>&1)"
+      pr_rc=$?
+      set -e
+      if [[ "$pr_rc" -ne 0 ]]; then
+        if pr_create_denied "$pr_out"; then
+          warn "$name: commit pushed to $branch, but PR creation is disabled for GitHub Actions in this repo. Enable 'Allow GitHub Actions to create and approve pull requests' or open a PR manually from $branch -> $BASE_BRANCH."
+          continue
+        fi
+        die "gh pr create failed for $name: $pr_out"
+      fi
+      pr_url="$pr_out"
       log "Opened PR: $pr_url"
     fi
 
@@ -478,8 +495,22 @@ else
     gh pr edit "$existing" --body-file "$body"
     pr_url="$existing"
   else
-    pr_url="$(gh pr create --base "$BASE_BRANCH" --head "$PR_BRANCH" \
-      --title "Bump $applied plugin SHA pin(s)" --body-file "$body")"
+    set +e
+    pr_out="$(gh pr create --base "$BASE_BRANCH" --head "$PR_BRANCH" \
+      --title "Bump $applied plugin SHA pin(s)" --body-file "$body" 2>&1)"
+    pr_rc=$?
+    set -e
+    if [[ "$pr_rc" -ne 0 ]]; then
+      if pr_create_denied "$pr_out"; then
+        warn "Commit pushed to $PR_BRANCH, but PR creation is disabled for GitHub Actions in this repo. Enable 'Allow GitHub Actions to create and approve pull requests' or open a PR manually from $PR_BRANCH -> $BASE_BRANCH."
+        echo "pr-url=" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+        echo "pr-urls=[]" >> "${GITHUB_OUTPUT:-/dev/stdout}"
+        group_end
+        exit 0
+      fi
+      die "gh pr create failed: $pr_out"
+    fi
+    pr_url="$pr_out"
   fi
 
   echo "pr-url=$pr_url" >> "${GITHUB_OUTPUT:-/dev/stdout}"
