@@ -88,7 +88,12 @@ case "$1" in
         if [ -n "${OPEN_PR_BRANCH:-}" ] && [ "$_head" = "$OPEN_PR_BRANCH" ]; then
           echo "https://github.com/acme/repo/pull/99"
         else echo ""; fi ;;
-      create) echo "https://github.com/acme/repo/pull/1" ;;
+      create)
+        if [ -n "${DENY_PR_CREATE:-}" ]; then
+          echo "pull request create failed: GraphQL: GitHub Actions is not permitted to create or approve pull requests (createPullRequest)" >&2
+          exit 1
+        fi
+        echo "https://github.com/acme/repo/pull/1" ;;
       edit)   : ;;
       *) echo "gh shim: unexpected pr subcommand: $*" >&2; exit 1 ;;
     esac
@@ -132,7 +137,7 @@ run_bump() {
     ALLOWED_HOSTS="github.com gitlab.com bitbucket.org" \
     PR_MODE="per-entry" PR_BRANCH="bump/plugin-shas" BASE_BRANCH="main" \
     GH_TOKEN="dummy" GITHUB_REPOSITORY="acme/repo" \
-    ONLY="${ONLY_FIXTURE:-}" OPEN_PR_BRANCH="${OPEN_PR_BRANCH:-}" \
+    ONLY="${ONLY_FIXTURE:-}" OPEN_PR_BRANCH="${OPEN_PR_BRANCH:-}" DENY_PR_CREATE="${DENY_PR_CREATE:-}" \
     RUN_URL="https://github.com/acme/repo/actions/runs/1" \
     GQL_LOG="$TMP/graphql.log" \
     GITHUB_OUTPUT="$TMP/out.txt" GITHUB_STEP_SUMMARY="$TMP/sum.md" \
@@ -232,6 +237,13 @@ assert_no_commit() {
   else echo "  FAIL $2 — expected 0 payloads for '$1', got '$n'"; failures=$((failures+1)); fi
 }
 
+assert_pr_count() {  # EXPECTED LABEL
+  total=$((total+1))
+  local got; got="$(jq -r 'length' <<<"$PRURLS_JSON")"
+  if [[ "$got" == "$1" ]]; then echo "  PASS $2"
+  else echo "  FAIL $2 — pr-urls has $got entries, expected $1"; failures=$((failures+1)); fi
+}
+
 echo "=== bump-plugin-shas manifest-synthesis tests (per-entry) ==="
 
 # A 3-entry fixture, all on github.com, no subdir (so the no-op subtree probe is
@@ -323,6 +335,25 @@ OPEN_PR_BRANCH=""
 assert_skip_reason "alpha" "open bump PR already exists"     "open PR on bump/alpha → alpha early-skipped with that reason"
 assert_not_bumped  "alpha"                                   "open-PR alpha not bumped"
 assert_bumped      "charlie"                                 "open PR on alpha does not block charlie's bump"
+
+echo
+echo "--- per-entry PR creation denied by GitHub Actions settings ---"
+# If repo settings block GITHUB_TOKEN from opening PRs, bump.sh must not fail the
+# whole run after creating signed commits; it should warn and continue with an
+# empty pr-urls output so downstream dispatch is skipped.
+f=$(mk pr_denied <<'EOF'
+{"plugins":[
+  {"name":"charlie","source":{"url":"https://github.com/acme/charlie","sha":"6666666666666666666666666666666666666666"}}
+]}
+EOF
+)
+DENY_PR_CREATE=1
+run_bump "$f"
+DENY_PR_CREATE=""
+assert_rc       0                                           "PR-creation-denied run exits 0 (non-fatal)"
+assert_bumped   "charlie"                                   "entry still bumps when PR creation is blocked"
+assert_pr_count 0                                           "blocked PR creation yields empty pr-urls output"
+assert_out      "PR creation is disabled for GitHub Actions" "blocked PR creation emits actionable warning"
 
 echo
 echo "--- subdir-existence guard (declared source.path gone at the new SHA) ---"
