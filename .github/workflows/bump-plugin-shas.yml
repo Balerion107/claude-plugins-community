@@ -24,8 +24,6 @@ name: Bump Plugin SHAs
 # faster, but mind the PR volume on a large marketplace.
 
 on:
-  schedule:
-    - cron: '23 7 * * *'  # Daily 07:23 UTC
   workflow_dispatch:
     inputs:
       max_bumps:

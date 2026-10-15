@@ -17,8 +17,6 @@ name: Owner Liveness Sweep
 # Refresh is additive-only and never rewrites an existing recorded id.
 
 on:
-  schedule:
-    - cron: '47 5 * * *'  # Daily 05:47 UTC
   workflow_dispatch:
 
 permissions:
