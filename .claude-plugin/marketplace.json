@@ -2106,18 +2106,6 @@
       "homepage": "https://smrf1093.github.io/Avicenna/"
     },
     {
-      "name": "aws-dev-toolkit",
-      "description": "A Claude Code plugin tailored to startups building on AWS. It includes domain specific skills and cross-cutting skills that required for builders and operators.",
-      "source": {
-        "source": "git-subdir",
-        "url": "aws-samples/sample-claude-code-plugins-for-startups",
-        "path": "plugins/aws-dev-toolkit",
-        "ref": "main",
-        "sha": "abdf86730f3f40ac4d2b775af8d745c3d43894ca"
-      },
-      "homepage": "https://github.com/aws-samples/sample-claude-code-plugins-for-startups/tree/main/plugins/aws-dev-toolkit"
-    },
-    {
       "name": "aws-serverless",
       "description": "Design, build, deploy, test, and debug serverless applications with AWS Serverless services.",
       "category": "development",
@@ -23925,6 +23913,20 @@
       "strict": false,
       "description": "Explain any topic like I'm 5: a dead-simple HTML picture explainer with big visuals and few words. Use /eli5 <topic>.",
       "category": "learning"
+    },
+    {
+      "name": "next-steps",
+      "source": "./next-steps",
+      "strict": false,
+      "description": "After each turn, suggests up to three next prompts above the input. Press 1, 2 or 3 to put one in the prompt box as a draft you can edit, 0 to dismiss.",
+      "category": "productivity"
+    },
+    {
+      "name": "html-plan",
+      "source": "./html-plan",
+      "strict": false,
+      "description": "Write an implementation plan as one interactive HTML page: a tree of claims, each proved by a mockup, state machine, call stack, schema or code, with the decisions you need to make placed where they matter. Use /html-plan <what to build>.",
+      "category": "development"
     }
   ]
 }
